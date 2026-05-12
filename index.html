@@ -1,18 +1,265 @@
-<!doctype html>
-<html>
-  <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta charset="UTF-8">
-	<title>
-	  Test
-	</title>
-	<link rel="stylesheet" href="style.css">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Boxes Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-  </head>
-<script src="index.js"> </script>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .game-container {
+            position: relative;
+            width: 600px;
+            height: 400px;
+            background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%);
+            border: 3px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .score-board {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 5px;
+        }
+
+        .timer {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 5px;
+        }
+
+        .player {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid #c92a2a;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s;
+        }
+
+        .player:hover {
+            transform: translateX(-50%) scale(1.05);
+        }
+
+        .box {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid #daa500;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            animation: fall linear forwards;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(400px);
+            }
+        }
+
+        .game-over-screen {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+        }
+
+        .game-over-screen.show {
+            display: flex;
+        }
+
+        .game-over-content h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ffd700;
+        }
+
+        .game-over-content p {
+            font-size: 32px;
+            margin-bottom: 30px;
+        }
+
+        .game-over-content button {
+            font-size: 20px;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .game-over-content button:hover {
+            transform: scale(1.1);
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #666;
+            font-size: 12px;
+            text-align: center;
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .game-container {
+                width: 90vw;
+                height: 60vh;
+                max-width: 600px;
+                max-height: 400px;
+            }
+        }
+    </style>
+</head>
 <body>
+    <div class="game-container">
+        <div class="score-board">Score: <span id="score">0</span></div>
+        <div class="timer">Time: <span id="timer">30</span>s</div>
+        <div class="player" id="player"></div>
+        
+        <div class="game-over-screen" id="gameOverScreen">
+            <div class="game-over-content">
+                <h1>Game Over!</h1>
+                <p>Final Score: <span id="finalScore">0</span></p>
+                <button onclick="location.reload()">Play Again</button>
+            </div>
+        </div>
+    </div>
 
-<iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d25356.56609971903!2d-122.09623913184815!3d37.399982137222814!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sus!4v1778607442193!5m2!1sen!2sus" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    <script>
+        const gameContainer = document.querySelector('.game-container');
+        const player = document.getElementById('player');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreDisplay = document.getElementById('finalScore');
 
+        let score = 0;
+        let timeLeft = 30;
+        let gameActive = true;
+        let playerX = gameContainer.clientWidth / 2 - 25;
+
+        // Player movement
+        document.addEventListener('mousemove', (e) => {
+            if (!gameActive) return;
+            
+            const rect = gameContainer.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            
+            // Keep player within bounds
+            playerX = Math.max(0, Math.min(mouseX - 25, gameContainer.clientWidth - 50));
+            player.style.left = playerX + 'px';
+        });
+
+        // Spawn falling boxes
+        function spawnBox() {
+            if (!gameActive) return;
+
+            const box = document.createElement('div');
+            box.className = 'box';
+            
+            const randomX = Math.random() * (gameContainer.clientWidth - 40);
+            box.style.left = randomX + 'px';
+            box.style.top = '-40px';
+            
+            const duration = 2 + Math.random() * 2; // 2-4 seconds to fall
+            box.style.animationDuration = duration + 's';
+            
+            gameContainer.appendChild(box);
+
+            // Click to catch
+            box.addEventListener('click', () => {
+                score++;
+                scoreDisplay.textContent = score;
+                box.remove();
+            });
+
+            // Remove after falling off screen
+            setTimeout(() => {
+                if (box.parentNode) {
+                    box.remove();
+                }
+            }, duration * 1000);
+        }
+
+        // Spawn boxes regularly
+        let spawnInterval = setInterval(() => {
+            if (gameActive) {
+                spawnBox();
+            }
+        }, 800);
+
+        // Timer countdown
+        let timerInterval = setInterval(() => {
+            if (gameActive) {
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }
+        }, 1000);
+
+        // End game
+        function endGame() {
+            gameActive = false;
+            clearInterval(spawnInterval);
+            clearInterval(timerInterval);
+            
+            finalScoreDisplay.textContent = score;
+            gameOverScreen.classList.add('show');
+        }
+    </script>
 </body>
 </html>
